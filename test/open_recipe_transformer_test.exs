@@ -1,8 +1,8 @@
-defmodule OpenRecipeTransformerTest do
+defmodule RecipeTransformerTest do
   use ExUnit.Case
-  doctest OpenRecipeTransformer
+  doctest RecipeTransformer
 
   test "greets the world" do
-    assert OpenRecipeTransformer.hello() == :world
+    assert RecipeTransformer.hello() == :world
   end
 end

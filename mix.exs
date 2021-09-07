@@ -1,9 +1,9 @@
-defmodule OpenRecipeTransformer.MixProject do
+defmodule RecipeTransformer.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :OpenRecipeTransformer,
+      app: :RecipeTransformer,
       version: "0.1.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,

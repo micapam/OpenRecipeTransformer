@@ -1,0 +1,22 @@
+---
+cook_time: <%= format_duration(cook_time) %>
+image: <%= image %>
+prep_time: <%= format_duration(prep_time) %>
+template: recipe
+title: <%= title %>
+yield: <%= yield %>
+---
+
+<%= description %>
+
+## Ingredients
+
+<%= for ingredient <- ingredients do %>
+- <%= ingredient %>
+<% end %>
+
+## Directions
+
+<%= for instruction <- instructions do %>
+1. <%= instruction["text"] %>
+<% end %>
