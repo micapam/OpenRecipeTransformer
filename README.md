@@ -1,6 +1,6 @@
-# RecipeTransformer
+# SerumRecipes
 
-**TODO: Add description**
+Loads recipes in schema.org format for Serum site generator.
 
 ## Installation
 

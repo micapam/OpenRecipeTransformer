@@ -1,9 +1,9 @@
-defmodule RecipeTransformer do
+defmodule SerumRecipes.Plugin.Loader do
   require EEx
   @behaviour Serum.Plugin
   @recipes_temporary_path "_recipes"
 
-  def name, do: "RecipeTransformer"
+  def name, do: "SerumRecipes.Plugin.Loader"
   def version, do: "0.0.1"
   def elixir, do: "~> 1.12"
   def serum, do: ">= 0.5.0"
