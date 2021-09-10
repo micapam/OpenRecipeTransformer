@@ -1,7 +1,8 @@
 ---
-cook_time: <%= format_duration(cook_time) %>
+<%= if cook_time do %>cook_time: <%= format_duration(cook_time) %><% end %>
+group: <%= group %>
 image: <%= image %>
-prep_time: <%= format_duration(prep_time) %>
+<%= if prep_time do %>prep_time: <%= format_duration(prep_time) %><% end %>
 template: recipe
 title: <%= title %>
 yield: <%= yield %>

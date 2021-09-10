@@ -1,7 +1,10 @@
 defmodule SerumRecipes.Plugin.Loader do
   require EEx
+  import Serum.IOProxy, only: [ put_msg: 2 ]
+
   @behaviour Serum.Plugin
-  @recipes_temporary_path "_recipes"
+  @markdown_temporary_path "/tmp/recipes"
+  @html_output_path "/recipes"
 
   def name, do: "SerumRecipes.Plugin.Loader"
   def version, do: "0.0.1"
@@ -13,53 +16,75 @@ defmodule SerumRecipes.Plugin.Loader do
     [
       build_started: 3,
       finalizing: 3,
+      processed_page: 2,
       reading_pages: 2,
+      rendered_page: 2
     ]
   end
 
-  def build_started(_src, _dest, _args) do
-    unless File.exists? @recipes_temporary_path do
-      File.mkdir! @recipes_temporary_path
+  def build_started(_src, _dest, args) do
+    unless File.exists? @markdown_temporary_path do
+      debug "Creating temporary directory for recipe markdown files: #{@markdown_temporary_path}"
+      File.mkdir! @markdown_temporary_path
     end
 
-    Path.wildcard("pages/*.recipe.yaml")
-      |> Enum.each(&generate_recipe_md_file/1)
+    source_directory = args[:source_directory] || "pages"
+
+    Path.wildcard("#{source_directory}/*/*.recipe.yaml")
+      |> Enum.each(&generate_recipe_md_file(&1, source_directory))
 
     :ok
   end
 
   def finalizing(_src, _dest, _args) do
-    recipes_output_path = "site/#{@recipes_temporary_path}"
+    if File.exists? @markdown_temporary_path do
+      debug "Removing temporary directory for recipe markdown files: #{@markdown_temporary_path}"
+      # File.rm_rf! @markdown_temporary_path
+    end
 
-    File.rm_rf! @recipes_temporary_path
-    File.cp_r! recipes_output_path, "site"
-    File.rm_rf! recipes_output_path
     :ok
   end
 
+  def processed_page(page, _args) do
+    updated_page = %{page | output: replace_paths(page.output)}
+
+    { :ok, updated_page }
+  end
+
   def reading_pages(files, _args) do
-    recipe_files = File.ls!(@recipes_temporary_path)
-      |> Enum.map(fn file -> "#{@recipes_temporary_path}/#{file}" end)
+    recipe_files = File.ls!(@markdown_temporary_path)
+      |> Enum.map(fn file -> "#{@markdown_temporary_path}/#{file}" end)
 
     {:ok, files ++ recipe_files}
   end
 
-  defp debug(msg), do: IO.puts("\x1b[90m#{name()} #{msg}\x1b[0m")
+  def rendered_page(file, _args) do
+    updated_file = %{file | out_data: replace_paths(file.out_data)} # TODO this is gross
+
+    { :ok, updated_file }
+  end
+
+  defp debug(msg), do: put_msg(:debug, msg)
 
   defp format_duration(iso_duration) do
-    debug("**** I was called with #{iso_duration}")
-
     Timex.Duration.parse!(iso_duration)
       |> Timex.Format.Duration.Formatters.Humanized.format
   end
 
-  defp generate_recipe_md_file(yaml_path) do
-    [ recipe_slug ] = Regex.run ~r/pages\/([A-Za-z0-9\-]+)/, yaml_path, capture: :all_but_first
-    recipe = YamlElixir.read_from_file!(yaml_path)
+  defp generate_recipe_md_file(yaml_path, src_dir) do
+    [ category_slug, recipe_slug ] = Regex.run(
+      ~r/#{src_dir}\/([A-Za-z0-9\-]+)\/([A-Za-z0-9\-]+)/,
+      yaml_path,
+      capture: :all_but_first
+    )
+
+    category = Recase.to_sentence category_slug
+    recipe = YamlElixir.read_from_file! yaml_path
 
     md_content = recipe_md(
       recipe["cookTime"],
       recipe["description"],
+      category,
       recipe["image"],
       recipe["recipeIngredient"],
       recipe["recipeInstructions"],
@@ -68,8 +93,14 @@ defmodule SerumRecipes.Plugin.Loader do
       recipe["recipeYield"]
     )
 
-    File.write! "#{@recipes_temporary_path}/#{recipe_slug}.md", md_content
+    md_path = "#{@markdown_temporary_path}/#{recipe_slug}.md"
+    debug("Writing #{recipe["name"]} to #{md_path}")
+    File.write! md_path, md_content
     :ok
+  end
+
+  defp replace_paths(str) do
+    String.replace(str, @markdown_temporary_path, @html_output_path)
   end
 
   EEx.function_from_file(
@@ -79,6 +110,7 @@ defmodule SerumRecipes.Plugin.Loader do
     ~w(
       cook_time
       description
+      group
       image
       ingredients
       instructions
